@@ -1197,7 +1197,11 @@ int get_cpuname(void){
 	case  3:
 	case  5:
 	case  6:
+#if defined(__x86_64__) || defined(__amd64__)
+	  return CPUTYPE_CORE2;
+#else
 	  return CPUTYPE_PENTIUM2;
+#endif
 	case  7:
 	case  8:
 	case 10:
@@ -1211,7 +1215,7 @@ int get_cpuname(void){
 	  return CPUTYPE_CORE2;
 	}
 	break;
-      case 1:
+      case 1:  // family 6 exmodel 1
 	switch (model) {
 	case  6:
 	  return CPUTYPE_CORE2;
@@ -1228,7 +1232,7 @@ int get_cpuname(void){
 	  return CPUTYPE_DUNNINGTON;
 	}
 	break;
-      case  2:
+      case  2: // family 6 exmodel 2
 	switch (model) {
 	case 5:
 	  //Intel Core (Clarkdale) / Core (Arrandale)
@@ -1257,7 +1261,7 @@ int get_cpuname(void){
 	  return CPUTYPE_NEHALEM;
 	}
 	break;
-      case 3:
+      case 3: // family 6 exmodel 3
 	switch (model) {
 	case  7:
 	    // Bay Trail	
@@ -1287,7 +1291,7 @@ int get_cpuname(void){
 	    return CPUTYPE_NEHALEM;
 	}
 	break;
-      case 4:
+      case 4: // family 6 exmodel 4
         switch (model) {
         case 5:
 	case 6:
@@ -1321,7 +1325,7 @@ int get_cpuname(void){
 	    return CPUTYPE_NEHALEM;
         }
         break;
-      case 5:
+      case 5:  // family 6 exmodel 5
         switch (model) {
 	case 6:
 	  //Broadwell
@@ -1359,10 +1363,12 @@ int get_cpuname(void){
 	    return CPUTYPE_NEHALEM;
 	case 12:
 	    // Apollo Lake
+	case 15:
+	    // Denverton		
 	    return CPUTYPE_NEHALEM;
 	}
 	break;
-      case 6:
+      case 6:  // family 6 exmodel 6
         switch (model) {
         case 6: // Cannon Lake
           if(support_avx512())
@@ -1374,11 +1380,26 @@ int get_cpuname(void){
 	  else
 	  return CPUTYPE_NEHALEM;
         }
-      break;  
-      case 9:
-      case 8: 
+      break;
+      case 7: // family 6 exmodel 7
         switch (model) {
-	case 14: // Kaby Lake
+	case 10: // Goldmont Plus
+	    return CPUTYPE_NEHALEM;
+        case 14: // Ice Lake
+          if(support_avx512())
+            return CPUTYPE_SKYLAKEX;
+          if(support_avx2())
+            return CPUTYPE_HASWELL;
+          if(support_avx())
+	    return CPUTYPE_SANDYBRIDGE;
+	  else
+	  return CPUTYPE_NEHALEM;
+        }
+      break;
+      case 9:
+      case 8:      
+        switch (model) {
+	case 14: // Kaby Lake and refreshes
           if(support_avx2())
             return CPUTYPE_HASWELL;
           if(support_avx())
@@ -1410,7 +1431,11 @@ int get_cpuname(void){
     case 0x5:
       return CPUTYPE_AMDK6;
     case 0x6:
+#if defined(__x86_64__) || defined(__amd64__)
+      return CPUTYPE_BARCELONA;
+#else
       return CPUTYPE_ATHLON;
+#endif
     case 0xf:
       switch (exfamily) {
       case  0:
@@ -1793,7 +1818,11 @@ int get_coretype(void){
 	case  4:
 	case  5:
 	case  6:
+#if defined(__x86_64__) || defined(__amd64__)
+	  return CORE_CORE2;
+#else
 	  return CORE_P6;
+#endif
 	case  7:
 	  return CORE_KATMAI;
 	case  8:
@@ -2000,7 +2029,11 @@ int get_coretype(void){
 
   if (vendor == VENDOR_AMD){
     if (family <= 0x5) return CORE_80486;
+#if defined(__x86_64__) || defined(__amd64__)
+    if (family <= 0xe) return CORE_BARCELONA;
+#else
     if (family <= 0xe) return CORE_ATHLON;
+#endif
     if (family == 0xf){
       if ((exfamily == 0) || (exfamily == 2)) return CORE_OPTERON;
       else if (exfamily == 5) return CORE_BOBCAT;

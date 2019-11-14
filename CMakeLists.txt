@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8.5)
 project(OpenBLAS C ASM)
 set(OpenBLAS_MAJOR_VERSION 0)
 set(OpenBLAS_MINOR_VERSION 3)
-set(OpenBLAS_PATCH_VERSION 6.dev)
+set(OpenBLAS_PATCH_VERSION 8.dev)
 set(OpenBLAS_VERSION "${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}.${OpenBLAS_PATCH_VERSION}")
 
 # Adhere to GNU filesystem layout conventions
@@ -20,9 +20,14 @@ if(MSVC)
 option(BUILD_WITHOUT_LAPACK "Do not build LAPACK and LAPACKE (Only BLAS or CBLAS)" ON)
 endif()
 option(BUILD_WITHOUT_CBLAS "Do not build the C interface (CBLAS) to the BLAS functions" OFF)
-option(DYNAMIC_ARCH "Include support for multiple CPU targets, with automatic selection at runtime (x86/x86_64 only)" OFF)
-option(DYNAMIC_OLDER "Include specific support for older cpu models (Penryn,Dunnington,Atom,Nano,Opteron) with DYNAMIC_ARCH" OFF)
+option(DYNAMIC_ARCH "Include support for multiple CPU targets, with automatic selection at runtime (x86/x86_64, aarch64 or ppc only)" OFF)
+option(DYNAMIC_OLDER "Include specific support for older x86 cpu models (Penryn,Dunnington,Atom,Nano,Opteron) with DYNAMIC_ARCH" OFF)
 option(BUILD_RELAPACK "Build with ReLAPACK (recursive implementation of several LAPACK functions on top of standard LAPACK)" OFF)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+option(NO_AFFINITY "Disable support for CPU affinity masks to avoid binding processes from e.g. R or numpy/scipy to a single core" ON)
+else()
+set(NO_AFFINITY 1)
+endif()
 
 # Add a prefix or suffix to all exported symbol names in the shared library.
 # Avoids conflicts with other BLAS libraries, especially when using
@@ -75,10 +80,10 @@ endif ()
 
 set(SUBDIRS	${BLASDIRS})
 if (NOT NO_LAPACK)
-  list(APPEND SUBDIRS lapack)
   if(BUILD_RELAPACK)
     list(APPEND SUBDIRS relapack/src)
   endif()
+  list(APPEND SUBDIRS lapack)
 endif ()
 
 # set which float types we want to build for
@@ -206,7 +211,8 @@ if (USE_THREAD)
   target_link_libraries(${OpenBLAS_LIBNAME} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-if (MSVC OR NOT NOFORTRAN)
+#if (MSVC OR NOT NOFORTRAN)
+if (NOT NO_CBLAS)
   # Broken without fortran on unix
   add_subdirectory(utest)
 endif()
@@ -223,6 +229,14 @@ set_target_properties(${OpenBLAS_LIBNAME} PROPERTIES
   VERSION ${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}
   SOVERSION ${OpenBLAS_MAJOR_VERSION}
 )
+
+if (BUILD_SHARED_LIBS AND BUILD_RELAPACK)
+  if (NOT MSVC)
+    target_link_libraries(${OpenBLAS_LIBNAME} "-Wl,-allow-multiple-definition")
+  else()
+    target_link_libraries(${OpenBLAS_LIBNAME} "/FORCE:MULTIPLE")
+  endif()
+endif()
 
 if (BUILD_SHARED_LIBS AND NOT ${SYMBOLPREFIX}${SYMBOLSUFIX} STREQUAL "")
 if (NOT DEFINED ARCH)

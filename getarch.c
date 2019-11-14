@@ -82,7 +82,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef OS_WINDOWS
 #include <windows.h>
 #endif
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
@@ -637,6 +637,18 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CORENAME  "POWER8"
 #endif
 
+#if defined(FORCE_POWER9) 
+#define FORCE
+#define ARCHITECTURE    "POWER"
+#define SUBARCHITECTURE "POWER9"
+#define SUBDIRNAME      "power"
+#define ARCHCONFIG   "-DPOWER9 " \
+		     "-DL1_DATA_SIZE=32768 -DL1_DATA_LINESIZE=128 " \
+		     "-DL2_SIZE=4194304 -DL2_LINESIZE=128 " \
+		     "-DDTB_DEFAULT_ENTRIES=128 -DDTB_SIZE=4096 -DL2_ASSOCIATIVE=8 "
+#define LIBNAME   "power9"
+#define CORENAME  "POWER9"
+#endif
 
 #ifdef FORCE_PPCG4
 #define FORCE
@@ -1189,7 +1201,7 @@ static int get_num_cores(void) {
 
 #ifdef OS_WINDOWS
   SYSTEM_INFO sysinfo;
-#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__)
   int m[2], count;
   size_t len;
 #endif
@@ -1203,7 +1215,7 @@ static int get_num_cores(void) {
   GetSystemInfo(&sysinfo);
   return sysinfo.dwNumberOfProcessors;
 
-#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__APPLE__)
   m[0] = CTL_HW;
   m[1] = HW_NCPU;
   len = sizeof(int);

@@ -1696,11 +1696,11 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ZGEMM_DEFAULT_P 256
 
 #ifdef WINDOWS_ABI
-#define SGEMM_DEFAULT_Q 320
+#define SGEMM_DEFAULT_Q 192
 #define DGEMM_DEFAULT_Q 128
 #else
-#define SGEMM_DEFAULT_Q 384
-#define DGEMM_DEFAULT_Q 256
+#define SGEMM_DEFAULT_Q 192
+#define DGEMM_DEFAULT_Q 128
 #endif
 #define CGEMM_DEFAULT_Q 192
 #define ZGEMM_DEFAULT_Q 128
@@ -1999,7 +1999,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ZGEMM_DEFAULT_UNROLL_M 2
 #define ZGEMM_DEFAULT_UNROLL_N 2
 
-#ifdef OS_LINUX
+#if defined(OS_LINUX) || defined(OS_DARWIN) || defined(OS_FREEBSD)
 #if L2_SIZE == 1024976
 #define SGEMM_DEFAULT_P 320
 #define DGEMM_DEFAULT_P 256
@@ -2230,6 +2230,37 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #endif
 
+#if defined(POWER9)
+
+#define SNUMOPT		16
+#define DNUMOPT		8
+
+#define GEMM_DEFAULT_OFFSET_A 0 
+#define GEMM_DEFAULT_OFFSET_B 65536
+#define GEMM_DEFAULT_ALIGN 0x0ffffUL
+
+#define SGEMM_DEFAULT_UNROLL_M 16
+#define SGEMM_DEFAULT_UNROLL_N 8
+#define DGEMM_DEFAULT_UNROLL_M 16
+#define DGEMM_DEFAULT_UNROLL_N 4
+#define CGEMM_DEFAULT_UNROLL_M 8
+#define CGEMM_DEFAULT_UNROLL_N 4
+#define ZGEMM_DEFAULT_UNROLL_M 8
+#define ZGEMM_DEFAULT_UNROLL_N 2
+
+#define SGEMM_DEFAULT_P 832
+#define DGEMM_DEFAULT_P  128
+#define CGEMM_DEFAULT_P  512
+#define ZGEMM_DEFAULT_P 256
+
+#define SGEMM_DEFAULT_Q 1026
+#define DGEMM_DEFAULT_Q  384
+#define CGEMM_DEFAULT_Q  1026
+#define ZGEMM_DEFAULT_Q 1026
+
+#define SYMV_P	 8
+
+#endif
 
 #if defined(SPARC) && defined(V7)
 
@@ -2557,38 +2588,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SYMV_P	16
 
-// Darwin / Cross
-#if defined(OS_DARWIN) && defined(CROSS)
-
-#define SGEMM_DEFAULT_UNROLL_M  2
-#define SGEMM_DEFAULT_UNROLL_N  2
-
-#define DGEMM_DEFAULT_UNROLL_M  2
-#define DGEMM_DEFAULT_UNROLL_N  2
-
-#define CGEMM_DEFAULT_UNROLL_M  2
-#define CGEMM_DEFAULT_UNROLL_N  2
-
-#define ZGEMM_DEFAULT_UNROLL_M  2
-#define ZGEMM_DEFAULT_UNROLL_N  2
-
-#define SGEMM_DEFAULT_P	128
-#define DGEMM_DEFAULT_P	128
-#define CGEMM_DEFAULT_P 96
-#define ZGEMM_DEFAULT_P 64
-
-#define SGEMM_DEFAULT_Q 240
-#define DGEMM_DEFAULT_Q 120
-#define CGEMM_DEFAULT_Q 120
-#define ZGEMM_DEFAULT_Q 120
-
-#define SGEMM_DEFAULT_R 12288
-#define DGEMM_DEFAULT_R 8192
-#define CGEMM_DEFAULT_R 4096
-#define ZGEMM_DEFAULT_R 4096
-
-#else // Linux / Native
-
 #if defined(CORTEXA53) || defined(CORTEXA57) || \
     defined(CORTEXA72) || defined(CORTEXA73) || \
     defined(FALKOR)    || defined(TSV110)
@@ -2605,15 +2604,30 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ZGEMM_DEFAULT_UNROLL_M  4
 #define ZGEMM_DEFAULT_UNROLL_N  4
 
-#define SGEMM_DEFAULT_P	512
-#define DGEMM_DEFAULT_P	256
-#define CGEMM_DEFAULT_P 256
-#define ZGEMM_DEFAULT_P 128
+/*FIXME: this should be using the cache size, but there is currently no easy way to
+query that on ARM. So if getarch counted more than 8 cores we simply assume the host
+is a big desktop or server with abundant cache rather than a phone or embedded device */ 
+#if NUM_CORES > 8
+  #define SGEMM_DEFAULT_P 512
+  #define DGEMM_DEFAULT_P 256
+  #define CGEMM_DEFAULT_P 256
+  #define ZGEMM_DEFAULT_P 128
 
-#define SGEMM_DEFAULT_Q 1024
-#define DGEMM_DEFAULT_Q 512
-#define CGEMM_DEFAULT_Q 512
-#define ZGEMM_DEFAULT_Q 512
+  #define SGEMM_DEFAULT_Q 1024
+  #define DGEMM_DEFAULT_Q 512
+  #define CGEMM_DEFAULT_Q 512
+  #define ZGEMM_DEFAULT_Q 512
+#else
+  #define SGEMM_DEFAULT_P 128
+  #define DGEMM_DEFAULT_P 160
+  #define CGEMM_DEFAULT_P 128
+  #define ZGEMM_DEFAULT_P 128
+
+  #define SGEMM_DEFAULT_Q 352
+  #define DGEMM_DEFAULT_Q 128
+  #define CGEMM_DEFAULT_Q 224
+  #define ZGEMM_DEFAULT_Q 112
+#endif
 
 #define SGEMM_DEFAULT_R 4096
 #define DGEMM_DEFAULT_R 4096
@@ -2708,8 +2722,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ZGEMM_DEFAULT_R 4096
 
 #endif // Cores
-
-#endif // Linux / Darwin
 
 #endif // ARMv8
 

@@ -59,6 +59,9 @@ set(FU "")
 if (APPLE OR (MSVC AND NOT ${CMAKE_C_COMPILER_ID} MATCHES "Clang"))
   set(FU "_")
 endif()
+if(MINGW AND NOT MINGW64)
+  set(FU "_")
+endif()
 
 set(COMPILER_ID ${CMAKE_C_COMPILER_ID})
 if (${COMPILER_ID} STREQUAL "GNU")
@@ -82,6 +85,11 @@ endif ()
 # f_check
 if (NOT NOFORTRAN)
   include("${PROJECT_SOURCE_DIR}/cmake/f_check.cmake")
+else ()
+ file(APPEND ${TARGET_CONF_TEMP}
+   "#define BUNDERSCORE _\n"
+   "#define NEEDBUNDERSCORE 1\n")
+ set(BU "_")
 endif ()
 
 # Cannot run getarch on target if we are cross-compiling
@@ -97,8 +105,39 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
   # Perhaps this should be inside a different file as it grows larger
   file(APPEND ${TARGET_CONF_TEMP}
     "#define ${TCORE}\n"
+    "#define CORE_${TCORE}\n"
     "#define CHAR_CORENAME \"${TCORE}\"\n")
-  if ("${TCORE}" STREQUAL "ARMV7")
+  if ("${TCORE}" STREQUAL "CORE2")
+    file(APPEND ${TARGET_CONF_TEMP}
+      "#define L1_DATA_SIZE\t32768\n"
+      "#define L1_DATA_LINESIZE\t64\n"
+      "#define L2_SIZE\t1048576\n"
+      "#define L2_LINESIZE\t64\n"
+      "#define DTB_DEFAULT_ENTRIES\t256\n"
+      "#define DTB_SIZE\t4096\n"
+      "#define HAVE_CMOV\n"
+      "#define HAVE_MMX\n"
+      "#define HAVE_SSE\n"
+      "#define HAVE_SSE2\n"
+      "#define HAVE_SSE3\n"
+      "#define HAVE_SSSE3\n"
+      "#define SLOCAL_BUFFER_SIZE\t16384\n"
+      "#define DLOCAL_BUFFER_SIZE\t16384\n"
+      "#define CLOCAL_BUFFER_SIZE\t16384\n"
+      "#define ZLOCAL_BUFFER_SIZE\t16384\n")
+      set(SGEMM_UNROLL_M 8)
+      set(SGEMM_UNROLL_N 4)
+      set(DGEMM_UNROLL_M 4)
+      set(DGEMM_UNROLL_N 4)
+      set(CGEMM_UNROLL_M 4)
+      set(CGEMM_UNROLL_N 2)
+      set(ZGEMM_UNROLL_M 2)
+      set(ZGEMM_UNROLL_N 2)
+      set(CGEMM3M_UNROLL_M 8)
+      set(CGEMM3M_UNROLL_N 4)
+      set(ZGEMM3M_UNROLL_M 4)
+      set(ZGEMM3M_UNROLL_N 4)
+  elseif ("${TCORE}" STREQUAL "ARMV7")
     file(APPEND ${TARGET_CONF_TEMP}
       "#define L1_DATA_SIZE\t65536\n"
       "#define L1_DATA_LINESIZE\t32\n"
@@ -113,6 +152,10 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
     set(SGEMM_UNROLL_N 4)
     set(DGEMM_UNROLL_M 4)
     set(DGEMM_UNROLL_N 4)
+    set(CGEMM_UNROLL_M 2)
+    set(CGEMM_UNROLL_N 2)
+    set(ZGEMM_UNROLL_M 2)
+    set(ZGEMM_UNROLL_N 2)
   elseif ("${TCORE}" STREQUAL "ARMV8")
     file(APPEND ${TARGET_CONF_TEMP}
       "#define L1_DATA_SIZE\t32768\n"
@@ -301,6 +344,9 @@ else(NOT CMAKE_CROSSCOMPILING)
     set(GETARCH_FLAGS ${GETARCH_FLAGS} -DFORCE_GENERIC)
   else()
     list(APPEND GETARCH_SRC ${PROJECT_SOURCE_DIR}/cpuid.S)
+    if (DEFINED TARGET_CORE)
+    set(GETARCH_FLAGS ${GETARCH_FLAGS} -DFORCE_${TARGET_CORE})
+  endif ()
   endif ()
 
   if ("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")

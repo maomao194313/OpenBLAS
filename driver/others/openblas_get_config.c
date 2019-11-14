@@ -35,12 +35,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string.h>
 
-#if defined(_WIN32) && defined(_MSC_VER)
-#if _MSC_VER < 1900
-#define snprintf _snprintf
-#endif
-#endif
-
 static char* openblas_config_str=""
 "OpenBLAS "
  VERSION
@@ -84,10 +78,10 @@ char tmpstr[20];
 #ifdef DYNAMIC_ARCH
   strcat(tmp_config_str, gotoblas_corename());
 #endif
-if (openblas_get_parallel() == 0)
-  sprintf(tmpstr, " SINGLE_THREADED");
-else 
-  snprintf(tmpstr,19," MAX_THREADS=%d",MAX_CPU_NUMBER);
+  if (openblas_get_parallel() == 0)
+    sprintf(tmpstr, " SINGLE_THREADED");
+  else 
+    snprintf(tmpstr,19," MAX_THREADS=%d",MAX_CPU_NUMBER);
   strcat(tmp_config_str, tmpstr);
   return tmp_config_str;
 }
