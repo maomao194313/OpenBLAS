@@ -122,7 +122,7 @@ extern "C" {
 #define ATOM GOTO_ATOM
 #undef  GOTO_ATOM
 #endif
-#else
+#elif !defined(OS_EMBEDDED)
 #include <sys/mman.h>
 #ifndef NO_SYSV_IPC
 #include <sys/shm.h>
@@ -134,6 +134,9 @@ extern "C" {
 #if defined(SMP) || defined(USE_LOCKING)
 #include <pthread.h>
 #endif
+#else
+#include <time.h>
+#include <math.h>
 #endif
 
 #if defined(OS_SUNOS)
@@ -257,6 +260,12 @@ typedef long BLASLONG;
 typedef unsigned long BLASULONG;
 #endif
 
+#ifndef bfloat16
+#include <stdint.h>
+typedef uint16_t bfloat16;
+#define BFLOAT16CONVERSION 1
+#endif
+
 #ifdef USE64BITINT
 typedef BLASLONG blasint;
 #if defined(OS_WINDOWS) && defined(__64BIT__)
@@ -297,6 +306,13 @@ typedef int blasint;
 #define SIZE	8
 #define  BASE_SHIFT 3
 #define ZBASE_SHIFT 4
+#elif defined(BFLOAT16)
+#define IFLOAT	bfloat16
+#define XFLOAT IFLOAT
+#define FLOAT	float
+#define SIZE   2
+#define BASE_SHIFT 1
+#define ZBASE_SHIFT 2
 #else
 #define FLOAT	float
 #define SIZE    4
@@ -306,6 +322,10 @@ typedef int blasint;
 
 #ifndef XFLOAT
 #define XFLOAT	FLOAT
+#endif
+
+#ifndef IFLOAT
+#define IFLOAT	FLOAT
 #endif
 
 #ifndef COMPLEX
@@ -335,7 +355,7 @@ typedef int blasint;
 #endif
 
 #if defined(ARMV7) || defined(ARMV6) || defined(ARMV8) || defined(ARMV5)
-#define YIELDING        asm volatile ("nop;nop;nop;nop;nop;nop;nop;nop; \n");
+#define YIELDING        __asm__ __volatile__ ("nop;nop;nop;nop;nop;nop;nop;nop; \n");
 #endif
 
 #ifdef BULLDOZER
@@ -344,13 +364,8 @@ typedef int blasint;
 #endif
 #endif
 
-#ifdef POWER8
-#ifndef YIELDING
-#define YIELDING        __asm__ __volatile__ ("nop;nop;nop;nop;nop;nop;nop;nop;\n");
-#endif
-#endif
 
-#ifdef POWER9
+#if defined(POWER8) || defined(POWER9) || defined(POWER10)
 #ifndef YIELDING
 #define YIELDING        __asm__ __volatile__ ("nop;nop;nop;nop;nop;nop;nop;nop;\n");
 #endif
@@ -390,7 +405,7 @@ please https://github.com/xianyi/OpenBLAS/issues/246
 #endif
 
 #ifndef BLAS3_MEM_ALLOC_THRESHOLD
-#define BLAS3_MEM_ALLOC_THRESHOLD 160
+#define BLAS3_MEM_ALLOC_THRESHOLD 32 
 #endif
 
 #ifdef QUAD_PRECISION
@@ -423,6 +438,11 @@ please https://github.com/xianyi/OpenBLAS/issues/246
 
 #ifdef ARCH_MIPS
 #include "common_mips.h"
+#endif
+
+    
+#ifdef ARCH_RISCV64
+#include "common_riscv64.h"
 #endif
 
 #ifdef ARCH_MIPS64
@@ -471,10 +491,12 @@ static inline unsigned long long rpcc(void){
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (unsigned long long)ts.tv_sec * 1000000000ull + ts.tv_nsec;
-#else
+#elif !defined(OS_EMBEDDED)
   struct timeval tv;
   gettimeofday(&tv,NULL);
   return (unsigned long long)tv.tv_sec * 1000000000ull + tv.tv_usec * 1000;
+#else
+  return 0;
 #endif
 }
 #define RPCC_DEFINED
@@ -502,6 +524,10 @@ static void __inline blas_lock(volatile BLASULONG *address){
 
 #ifdef OS_LINUX
 #include "common_linux.h"
+#endif
+
+#ifdef OS_EMBEDDED
+#define DTB_DEFAULT_ENTRIES 64
 #endif
 
 #define MMAP_ACCESS (PROT_READ | PROT_WRITE)
@@ -657,6 +683,8 @@ void gotoblas_dynamic_init(void);
 void gotoblas_dynamic_quit(void);
 void gotoblas_profile_init(void);
 void gotoblas_profile_quit(void);
+	
+int support_avx512(void);	
 
 #ifdef USE_OPENMP
 
@@ -668,7 +696,7 @@ __declspec(dllimport) int __cdecl omp_in_parallel(void);
 __declspec(dllimport) int __cdecl omp_get_num_procs(void);
 #endif
 
-#if (__STDC_VERSION__ >= 201112L)
+#ifdef HAVE_C11
 #if defined(C_GCC) && ( __GNUC__ < 7) 
 // workaround for GCC bug 65467
 #ifndef _Atomic
